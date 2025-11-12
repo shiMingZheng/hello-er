@@ -1,13 +1,17 @@
 import { defineStore } from 'pinia';
+import { login as loginApi } from '@/api/auth';
 
 // 定义一个叫 'user' 的 store
 export const useUserStore = defineStore('user', {
     // 状态
 	state: () => ({
-		token: null,
-		userInfo: {
-			nickname: '未登录'
-		},
+		token: uni.getStorageSync('token') || null, // 从本地读取
+		userInfo: uni.getStorageSync('userInfo') || {
+			id: null,
+			username: null,
+			role: null,
+			customerId: null
+		}
 	}),
     
     // Getters (计算属性)
@@ -21,10 +25,23 @@ export const useUserStore = defineStore('user', {
 		 * 模拟登录, 设置 Token
 		 * @param {string} fakeToken 
 		 */
-		login(fakeToken) {
-			this.token = fakeToken;
-			this.userInfo.nickname = '已登录用户';
-			console.log('Pinia: 登录成功, Token已设置');
+		async login(credentials) {
+			try {
+				const res = await loginApi(credentials); // 调用真实 API
+				
+				// res 结构：{ token, userInfo: { id, username, role, customerId } }
+				this.token = res.token;
+				this.userInfo = res.userInfo;
+				
+				// 持久化存储
+				uni.setStorageSync('token', res.token);
+				uni.setStorageSync('userInfo', res.userInfo);
+				
+				console.log('✅ User Store: 登录成功', this.userInfo);
+			} catch (e) {
+				console.error('❌ User Store: 登录失败', e);
+				throw e;
+			}
 		},
 
 		/**
@@ -32,8 +49,13 @@ export const useUserStore = defineStore('user', {
 		 */
 		logout() {
 			this.token = null;
-			this.userInfo.nickname = '未登录';
-			console.log('Pinia: 成功登出');
+			this.userInfo = { id: null, username: null, role: null, customerId: null };
+			
+			// 清除本地存储
+			uni.removeStorageSync('token');
+			uni.removeStorageSync('userInfo');
+			
+			console.log('✅ User Store: 成功登出');
 		},
 	},
 });
