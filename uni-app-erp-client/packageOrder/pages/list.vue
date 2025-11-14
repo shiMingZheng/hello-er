@@ -7,7 +7,12 @@
 		</view>
 
 		<view v-else class="order-list">
-			<view v-for="order in orderStore.sortedOrders" :key="order.id" class="order-card">
+			<view 
+				v-for="order in orderStore.sortedOrders" 
+				:key="order.id" 
+				class="order-card"
+				@click="goToDetail(order.id)"
+			>
 				<view class="card-header">
 					<text class="order-id">{{ order.id }}</text>
 					<text class="order-status">{{ order.status }}</text>
@@ -24,7 +29,7 @@
 				<view class="card-footer">
 					<text>合计：</text>
 					<text class="total-price">¥ {{ order.totalPrice }}</text>
-					<button size="mini" type="default">查看详情</button>
+					<button size="mini" type="default" @click.stop="goToDetail(order.id)">查看详情</button>
 				</view>
 			</view>
 		</view>
@@ -33,14 +38,21 @@
 </template>
 
 <script setup>
-import { useOrderStore } from '@/store/order.js'; // 1. 导入 order store
+import { useOrderStore } from '@/store/order.js';
 
-const orderStore = useOrderStore(); // 2. 获取实例
+const orderStore = useOrderStore();
 
 // 去首页
 const goHome = () => {
 	uni.switchTab({
 		url: '/pages/index/index'
+	});
+};
+
+// 跳转订单详情
+const goToDetail = (orderId) => {
+	uni.navigateTo({
+		url: `/packageOrder/pages/detail?id=${orderId}`
 	});
 };
 </script>
@@ -73,6 +85,10 @@ const goHome = () => {
 	border-radius: 10rpx;
 	margin-bottom: 20rpx;
 	padding: 20rpx;
+	transition: all 0.3s;
+}
+.order-card:active {
+	transform: scale(0.98);
 }
 .card-header {
 	display: flex;

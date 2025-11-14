@@ -18,13 +18,14 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import { useUserStore } from '@/store/user.js'; // 新增这行
-import { useCartStore } from '@/store/cart.js'; // 1. 导入 cart store
+import { useCartStore } from '@/store/cart.js';
+import { useUserStore } from '@/store/user.js'; // ← 【必须添加这一行】
 
-const cartStore = useCartStore(); // 2. 获取实例
-const product = ref({}); // 存储从首页传来的商品对象
+const cartStore = useCartStore();
+const userStore = useUserStore(); // ← 【必须添加这一行】
+const product = ref({});
 
 onLoad((options) => {
 	if (options.product) {

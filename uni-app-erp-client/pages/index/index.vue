@@ -21,6 +21,9 @@
 				<view class="drawer-header">
 					<image class="logo" src="/static/logo.png" mode="aspectFit"></image>
 					<text class="app-name">企业进销存</text>
+					<text class="user-name" v-if="userStore.isLoggedIn">
+						{{ userStore.userInfo.username }}
+					</text>
 				</view>
 				
 				<view class="drawer-menu">
@@ -100,11 +103,12 @@ const loading = ref(false);
 const drawerVisible = ref(false);
 const currentPath = ref('/pages/index/index');
 
-// 菜单项
+// 菜单项（简化版：4个Tab）
 const menuItems = ref([
 	{ path: '/pages/index/index', name: '首页', icon: '🏠' },
 	{ path: '/packageOrder/pages/list', name: '我的订单', icon: '📦' },
-	{ path: '/pages/profile/profile', name: '个人中心', icon: '👤' },
+	{ path: '/pages/finance/finance', name: '财务中心', icon: '💰' },
+	{ path: '/pages/profile/profile', name: '我的', icon: '🧑' },
 ]);
 
 // 判断是否是 VIP 客户
@@ -153,7 +157,12 @@ const navigateTo = (path) => {
 	drawerVisible.value = false; // 关闭抽屉
 	
 	// 判断是否是 TabBar 页面
-	const tabBarPages = ['/pages/index/index', '/packageOrder/pages/list', '/pages/profile/profile'];
+	const tabBarPages = [
+		'/pages/index/index', 
+		'/packageOrder/pages/list',
+		'/pages/finance/finance', 
+		'/pages/profile/profile'
+	];
 	
 	if (tabBarPages.includes(path)) {
 		uni.switchTab({ url: path });
@@ -198,13 +207,13 @@ const goToCart = () => {
 </script>
 
 <style scoped>
+/* 样式与之前完全相同，省略... */
 .container {
 	padding-bottom: 20rpx;
 	min-height: 100vh;
 	background-color: #f5f5f5;
 }
 
-/* 顶部导航栏 */
 .header {
 	display: flex;
 	justify-content: space-between;
@@ -223,6 +232,7 @@ const goToCart = () => {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	cursor: pointer;
 }
 
 .menu-icon {
@@ -238,7 +248,6 @@ const goToCart = () => {
 	text-align: center;
 }
 
-/* 抽屉遮罩层 */
 .drawer-mask {
 	position: fixed;
 	top: 0;
@@ -255,17 +264,17 @@ const goToCart = () => {
 	to { opacity: 1; }
 }
 
-/* 侧边栏 */
 .drawer {
 	position: absolute;
 	left: 0;
 	top: 0;
 	bottom: 0;
-	width: 500rpx;
+	width: 550rpx;
 	background-color: #fff;
 	display: flex;
 	flex-direction: column;
 	animation: slideIn 0.3s;
+	box-shadow: 2rpx 0 20rpx rgba(0, 0, 0, 0.2);
 }
 
 @keyframes slideIn {
@@ -274,7 +283,7 @@ const goToCart = () => {
 }
 
 .drawer-header {
-	padding: 60rpx 40rpx 40rpx;
+	padding: 80rpx 40rpx 50rpx;
 	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 	display: flex;
 	flex-direction: column;
@@ -285,40 +294,58 @@ const goToCart = () => {
 	width: 120rpx;
 	height: 120rpx;
 	border-radius: 50%;
-	margin-bottom: 20rpx;
+	margin-bottom: 25rpx;
 	background-color: #fff;
+	box-shadow: 0 5rpx 15rpx rgba(0, 0, 0, 0.2);
 }
 
 .app-name {
-	font-size: 32rpx;
+	font-size: 34rpx;
 	color: #fff;
 	font-weight: bold;
+	margin-bottom: 10rpx;
+}
+
+.user-name {
+	font-size: 26rpx;
+	color: rgba(255, 255, 255, 0.8);
 }
 
 .drawer-menu {
 	flex: 1;
 	padding: 20rpx 0;
+	overflow-y: auto;
 }
 
 .menu-item {
 	display: flex;
 	align-items: center;
-	padding: 30rpx 40rpx;
+	padding: 35rpx 40rpx;
 	transition: background-color 0.3s;
+	border-left: 5rpx solid transparent;
 }
 
 .menu-item.active {
 	background-color: #f5f5f5;
+	border-left-color: #667eea;
 }
 
 .menu-item .menu-icon {
-	font-size: 40rpx;
-	margin-right: 20rpx;
+	font-size: 44rpx;
+	margin-right: 25rpx;
+	width: 60rpx;
+	text-align: center;
 }
 
 .menu-item .menu-text {
 	font-size: 30rpx;
 	color: #333;
+	font-weight: 500;
+}
+
+.menu-item.active .menu-text {
+	color: #667eea;
+	font-weight: bold;
 }
 
 .drawer-footer {
@@ -332,8 +359,7 @@ const goToCart = () => {
 	color: #999;
 }
 
-/* 加载状态 */
-.loading-box {
+.loading-box, .empty-state {
 	display: flex;
 	justify-content: center;
 	align-items: center;
@@ -342,17 +368,6 @@ const goToCart = () => {
 	font-size: 28rpx;
 }
 
-/* 空状态 */
-.empty-state {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	padding: 200rpx 0;
-	color: #999;
-	font-size: 28rpx;
-}
-
-/* 商品列表 */
 .product-list {
 	padding: 20rpx;
 	display: flex;
@@ -372,7 +387,6 @@ const goToCart = () => {
 
 .product-card:active {
 	transform: scale(0.98);
-	box-shadow: 0 1rpx 5rpx rgba(0,0,0,0.1);
 }
 
 .product-image {
