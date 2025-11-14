@@ -1,10 +1,45 @@
 <template>
 	<view class="container">
+		<!-- 顶部导航栏 -->
 		<view class="header">
+			<!-- 菜单按钮 -->
+			<view class="menu-btn" @click="toggleDrawer">
+				<text class="menu-icon">☰</text>
+			</view>
+			
 			<text class="title">商品列表</text>
+			
 			<button @click="goToCart" size="mini" type="default">
-				查看购物车 ({{ cartStore.totalCount }})
+				购物车 ({{ cartStore.totalCount }})
 			</button>
+		</view>
+
+		<!-- 侧边栏抽屉（遮罩层） -->
+		<view v-if="drawerVisible" class="drawer-mask" @click="toggleDrawer">
+			<!-- 侧边栏内容 -->
+			<view class="drawer" @click.stop>
+				<view class="drawer-header">
+					<image class="logo" src="/static/logo.png" mode="aspectFit"></image>
+					<text class="app-name">企业进销存</text>
+				</view>
+				
+				<view class="drawer-menu">
+					<view 
+						v-for="item in menuItems" 
+						:key="item.path"
+						class="menu-item"
+						:class="{ active: currentPath === item.path }"
+						@click="navigateTo(item.path)"
+					>
+						<text class="menu-icon">{{ item.icon }}</text>
+						<text class="menu-text">{{ item.name }}</text>
+					</view>
+				</view>
+				
+				<view class="drawer-footer">
+					<text class="version">v1.0.0</text>
+				</view>
+			</view>
 		</view>
 
 		<!-- 加载状态 -->
@@ -33,14 +68,11 @@
 				<view class="product-info">
 					<text class="product-name">{{ product.name }}</text>
 					<view class="price-box">
-						<!-- 显示根据客户等级的价格 -->
 						<text class="product-price">¥ {{ getProductPrice(product) }}</text>
-						<!-- 如果是 VIP，显示节省金额 -->
 						<text v-if="isVipCustomer && product.normalPrice > product.vipPrice" class="save-tip">
 							节省 ¥{{ (product.normalPrice - product.vipPrice).toFixed(2) }}
 						</text>
 					</view>
-					<!-- 库存提示 -->
 					<text class="stock-info" :class="{ 'low-stock': product.stock < 10 }">
 						库存: {{ product.stock }}
 					</text>
@@ -64,10 +96,19 @@ const userStore = useUserStore();
 const products = ref([]);
 const loading = ref(false);
 
+// 侧边栏状态
+const drawerVisible = ref(false);
+const currentPath = ref('/pages/index/index');
+
+// 菜单项
+const menuItems = ref([
+	{ path: '/pages/index/index', name: '首页', icon: '🏠' },
+	{ path: '/packageOrder/pages/list', name: '我的订单', icon: '📦' },
+	{ path: '/pages/profile/profile', name: '个人中心', icon: '👤' },
+]);
+
 // 判断是否是 VIP 客户
 const isVipCustomer = computed(() => {
-	// 从 userInfo 中获取客户等级（后端会返回）
-	// 如果 userInfo.customerLevel 是 'VIP'，则返回 true
 	return userStore.userInfo?.customerLevel === 'VIP';
 });
 
@@ -99,17 +140,36 @@ const loadProducts = async () => {
 };
 
 /**
+ * 切换侧边栏
+ */
+const toggleDrawer = () => {
+	drawerVisible.value = !drawerVisible.value;
+};
+
+/**
+ * 导航到指定页面
+ */
+const navigateTo = (path) => {
+	drawerVisible.value = false; // 关闭抽屉
+	
+	// 判断是否是 TabBar 页面
+	const tabBarPages = ['/pages/index/index', '/packageOrder/pages/list', '/pages/profile/profile'];
+	
+	if (tabBarPages.includes(path)) {
+		uni.switchTab({ url: path });
+	} else {
+		uni.navigateTo({ url: path });
+	}
+};
+
+/**
  * 获取商品价格（根据客户等级）
- * 注意：后端 /app/product 接口已经自动根据客户等级返回对应价格
- * 这里我们直接使用后端返回的 price 字段
  */
 const getProductPrice = (product) => {
-	// 方案一：如果后端返回了统一的 price 字段
 	if (product.price) {
 		return product.price.toFixed(2);
 	}
 	
-	// 方案二：如果后端返回了 normalPrice 和 vipPrice，前端自己判断
 	if (isVipCustomer.value) {
 		return product.vipPrice.toFixed(2);
 	} else {
@@ -121,11 +181,8 @@ const getProductPrice = (product) => {
  * 跳转商品详情页
  */
 const goToDetail = (product) => {
-	// uni-app 导航无法传递复杂对象，先转为 JSON 字符串
 	const productJson = JSON.stringify(product);
-	
 	uni.navigateTo({
-		// 使用 encodeURIComponent 编码 JSON 字符串
 		url: `/packageProduct/pages/detail?product=${encodeURIComponent(productJson)}`
 	});
 };
@@ -142,25 +199,137 @@ const goToCart = () => {
 
 <style scoped>
 .container {
-	padding: 20rpx;
+	padding-bottom: 20rpx;
 	min-height: 100vh;
 	background-color: #f5f5f5;
 }
 
+/* 顶部导航栏 */
 .header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 30rpx;
 	padding: 20rpx;
 	background-color: #fff;
-	border-radius: 10rpx;
+	border-bottom: 1px solid #f0f0f0;
+	position: sticky;
+	top: 0;
+	z-index: 100;
+}
+
+.menu-btn {
+	width: 80rpx;
+	height: 80rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.menu-icon {
+	font-size: 40rpx;
+	color: #333;
 }
 
 .title {
+	flex: 1;
 	font-size: 36rpx;
 	font-weight: bold;
 	color: #333;
+	text-align: center;
+}
+
+/* 抽屉遮罩层 */
+.drawer-mask {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	z-index: 999;
+	animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+/* 侧边栏 */
+.drawer {
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
+	width: 500rpx;
+	background-color: #fff;
+	display: flex;
+	flex-direction: column;
+	animation: slideIn 0.3s;
+}
+
+@keyframes slideIn {
+	from { transform: translateX(-100%); }
+	to { transform: translateX(0); }
+}
+
+.drawer-header {
+	padding: 60rpx 40rpx 40rpx;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.logo {
+	width: 120rpx;
+	height: 120rpx;
+	border-radius: 50%;
+	margin-bottom: 20rpx;
+	background-color: #fff;
+}
+
+.app-name {
+	font-size: 32rpx;
+	color: #fff;
+	font-weight: bold;
+}
+
+.drawer-menu {
+	flex: 1;
+	padding: 20rpx 0;
+}
+
+.menu-item {
+	display: flex;
+	align-items: center;
+	padding: 30rpx 40rpx;
+	transition: background-color 0.3s;
+}
+
+.menu-item.active {
+	background-color: #f5f5f5;
+}
+
+.menu-item .menu-icon {
+	font-size: 40rpx;
+	margin-right: 20rpx;
+}
+
+.menu-item .menu-text {
+	font-size: 30rpx;
+	color: #333;
+}
+
+.drawer-footer {
+	padding: 40rpx;
+	text-align: center;
+	border-top: 1px solid #f0f0f0;
+}
+
+.version {
+	font-size: 24rpx;
+	color: #999;
 }
 
 /* 加载状态 */
@@ -185,6 +354,7 @@ const goToCart = () => {
 
 /* 商品列表 */
 .product-list {
+	padding: 20rpx;
 	display: flex;
 	flex-direction: column;
 	gap: 20rpx;

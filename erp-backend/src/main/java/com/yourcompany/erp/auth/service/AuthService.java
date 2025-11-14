@@ -37,36 +37,54 @@ public class AuthService {
     /**
      * 登录
      */
-    public LoginVO login(LoginDTO dto) {
-        // 1. 查询用户
-        User user = userService.findByUsername(dto.getUsername())
-                .orElseThrow(() -> new BusinessException("用户名或密码错误"));
+    /**
+	* 登录
+	*/
+	public LoginVO login(LoginDTO dto) {
+		// 1. 查询用户
+		User user = userService.findByUsername(dto.getUsername())
+				.orElseThrow(() -> new BusinessException("用户名或密码错误"));
+	
+		// 2. 验证密码
+		if (!passwordUtils.matches(dto.getPassword(), user.getPassword())) {
+			throw new BusinessException("用户名或密码错误");
+		}
+	
+		// 3. 检查状态
+		if (user.getStatus() == 0) {
+			throw new BusinessException("账号已被禁用");
+		}
+	
+		// 4. 生成 Token
+		String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole().name());
+	
+		// 5. 构造响应（调用独立方法获取客户等级）
+		String customerLevel = getCustomerLevel(user);
+		
+		LoginVO.UserInfo userInfo = new LoginVO.UserInfo(
+				user.getId(),
+				user.getUsername(),
+				user.getRole().name(),
+				user.getCustomerId(),
+				customerLevel
+		);
+	
+		log.info("用户 {} 登录成功", user.getUsername());
+		
+		return new LoginVO(token, userInfo);
+	}
 
-        // 2. 验证密码
-        if (!passwordUtils.matches(dto.getPassword(), user.getPassword())) {
-            throw new BusinessException("用户名或密码错误");
-        }
-
-        // 3. 检查状态
-        if (user.getStatus() == 0) {
-            throw new BusinessException("账号已被禁用");
-        }
-
-        // 4. 生成 Token
-        String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole().name());
-
-        // 5. 构造响应
-        LoginVO.UserInfo userInfo = new LoginVO.UserInfo(
-                user.getId(),
-                user.getUsername(),
-                user.getRole().name(),
-                user.getCustomerId()
-        );
-
-        log.info("用户 {} 登录成功", user.getUsername());
-        
-        return new LoginVO(token, userInfo);
-    }
+	/**
+	* 获取客户等级（独立方法）
+	*/
+	private String getCustomerLevel(User user) {
+		if (user.getRole() == User.UserRole.CUSTOMER && user.getCustomerId() != null) {
+			return customerRepository.findById(user.getCustomerId())
+					.map(customer -> customer.getLevel().name())
+					.orElse(null);
+		}
+		return null;
+	}
 
     /**
      * 客户注册

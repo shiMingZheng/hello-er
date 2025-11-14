@@ -21,6 +21,9 @@ public class Product {
 
     @Column(nullable = false, length = 100)
     private String name;  // 商品名称
+	
+	@Column(length = 255)
+	private String image;  // 商品图片 URL
 
     @Column(length = 50)
     private String code;  // 商品编码（如条形码）

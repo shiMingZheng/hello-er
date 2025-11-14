@@ -23,6 +23,7 @@ public class LoginVO {
         private String username;
         private String role;
         private Long customerId;  // 如果是客户，返回客户ID
+		private String customerLevel;  // 【新增】客户等级
     }
 
 }

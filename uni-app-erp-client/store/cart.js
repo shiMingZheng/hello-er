@@ -1,12 +1,11 @@
-// [新代码] uni-app-erp-client/store/cart.js
+// [改造后] uni-app-erp-client/store/cart.js
 import { defineStore } from 'pinia';
-import { useUserStore } from './user'; // 导入 user store (未来可能需要)
 
 export const useCartStore = defineStore('cart', {
 	state: () => ({
 		/**
 		 * 购物车商品列表
-		 * 格式: [{ id: '123', name: '商品A', price: 99, quantity: 1, ... }]
+		 * 格式: [{ id: '123', name: '商品A', price: 99, image: 'xxx', quantity: 1 }]
 		 */
 		items: [],
 	}),
@@ -38,19 +37,36 @@ export const useCartStore = defineStore('cart', {
 	actions: {
 		/**
 		 * 添加商品到购物车
-		 * @param {object} product 商品对象 (如 { id: '123', name: '商品A', price: 99 })
+		 * @param {object} product 商品对象 (如 { id, name, price, image })
 		 */
 		addItem(product) {
+			// 必需字段验证
+			if (!product.id || !product.name || product.price === undefined) {
+				console.error('❌ Cart Store: 商品信息不完整', product);
+				uni.showToast({
+					title: '商品信息不完整',
+					icon: 'error'
+				});
+				return;
+			}
+			
 			const existingItem = this.items.find(item => item.id === product.id);
 			
 			if (existingItem) {
 				// 1. 如果已存在，数量+1
 				existingItem.quantity++;
-				console.log('Cart Store: 商品数量 +1');
+				console.log('✅ Cart Store: 商品数量 +1', existingItem);
 			} else {
-				// 2. 如果不存在，添加新商品
-				this.items.push({ ...product, quantity: 1 });
-				console.log('Cart Store: 商品已添加到购物车');
+				// 2. 如果不存在，添加新商品（确保包含所有必需字段）
+				const newItem = { 
+					id: product.id,
+					name: product.name,
+					price: product.price,
+					image: product.image || '/static/logo.png', // 确保有图片
+					quantity: 1 
+				};
+				this.items.push(newItem);
+				console.log('✅ Cart Store: 商品已添加到购物车', newItem);
 			}
 			
 			uni.showToast({
@@ -65,7 +81,7 @@ export const useCartStore = defineStore('cart', {
 		 */
 		removeItem(productId) {
 			this.items = this.items.filter(item => item.id !== productId);
-			console.log(`Cart Store: 商品 ${productId} 已移除`);
+			console.log(`✅ Cart Store: 商品 ${productId} 已移除`);
 		},
 		
 		/**
@@ -81,6 +97,7 @@ export const useCartStore = defineStore('cart', {
 					this.removeItem(productId);
 				} else {
 					item.quantity = newQuantity;
+					console.log(`✅ Cart Store: 商品 ${productId} 数量更新为 ${newQuantity}`);
 				}
 			}
 		},
@@ -90,7 +107,7 @@ export const useCartStore = defineStore('cart', {
 		 */
 		clearCart() {
 			this.items = [];
-			console.log('Cart Store: 购物车已清空');
+			console.log('✅ Cart Store: 购物车已清空');
 		}
 	}
 });
